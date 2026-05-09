@@ -1,0 +1,141 @@
+/* ============================================================
+   AssetFlow MINI — Global styles
+   Drop into src/index.css and import once in src/main.tsx:
+       import "./index.css";
+   This file provides: CSS variable themes (light + dark),
+   font loading, browser reset, base typography, scrollbars.
+   The JSX components use inline styles that reference the
+   variables defined here (var(--bg), var(--card), etc.).
+   ============================================================ */
+
+   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+   /* ---------- Light theme (default) ---------- */
+   :root {
+     --bg: #f7f8fb;
+     --card: #ffffff;
+     --card-2: #fafbfd;
+     --card-hover: #f8fafc;
+     --border: #ecf0f5;
+     --border-strong: #dde3ec;
+     --divider: #f3f5f9;
+     --text: #0b1220;
+     --text-soft: #1e293b;
+     --muted: #64748b;
+     --subtle: #94a3b8;
+     --success: #059669;
+     --success-bg: #ecfdf5;
+     --danger: #dc2626;
+     --danger-bg: #fef2f2;
+     --blue: #2563eb;
+     --blue-bg: #eff6ff;
+     --amber: #d97706;
+     --amber-bg: #fffbeb;
+     --purple: #7c3aed;
+     --purple-bg: #f5f3ff;
+     --neutral-bg: #f1f5f9;
+     --neutral-text: #475569;
+     --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+     --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+     --scroll-thumb: #cbd5e1;
+     --scroll-thumb-hover: #94a3b8;
+     --input-bg: #ffffff;
+     --chart-grid: #f1f5f9;
+     --chart-axis: #cbd5e1;
+   }
+   
+   /* ---------- Dark theme ---------- */
+   [data-theme="dark"] {
+     --bg: #0a0e17;
+     --card: #131826;
+     --card-2: #1a2030;
+     --card-hover: #1a2030;
+     --border: #232a3a;
+     --border-strong: #2d3548;
+     --divider: #1c2231;
+     --text: #f1f5f9;
+     --text-soft: #cbd5e1;
+     --muted: #94a3b8;
+     --subtle: #64748b;
+     --success: #34d399;
+     --success-bg: rgba(16, 185, 129, 0.14);
+     --danger: #f87171;
+     --danger-bg: rgba(239, 68, 68, 0.14);
+     --blue: #60a5fa;
+     --blue-bg: rgba(59, 130, 246, 0.16);
+     --amber: #fbbf24;
+     --amber-bg: rgba(245, 158, 11, 0.16);
+     --purple: #a78bfa;
+     --purple-bg: rgba(139, 92, 246, 0.16);
+     --neutral-bg: #1c2231;
+     --neutral-text: #cbd5e1;
+     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+     --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+     --scroll-thumb: #2d3548;
+     --scroll-thumb-hover: #3d4760;
+     --input-bg: #1a2030;
+     --chart-grid: #232a3a;
+     --chart-axis: #2d3548;
+   }
+   
+   /* ---------- Reset ---------- */
+   * {
+     box-sizing: border-box;
+     margin: 0;
+     padding: 0;
+   }
+   
+   /* ---------- Body / typography defaults ---------- */
+   html,
+   body {
+     height: 100vh;
+     overflow: hidden;
+     font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+     -webkit-font-smoothing: antialiased;
+     background: var(--bg);
+     color: var(--text);
+     font-size: 14px;
+     transition: background-color 0.2s ease, color 0.2s ease;
+   }
+   
+   #root {
+     height: 100vh;
+   }
+   
+   button {
+     font-family: inherit;
+     cursor: pointer;
+   }
+   
+   input,
+   select {
+     font-family: inherit;
+   }
+   
+   /* ---------- Scrollbars ---------- */
+   ::-webkit-scrollbar {
+     width: 6px;
+   }
+   
+   ::-webkit-scrollbar-track {
+     background: transparent;
+   }
+   
+   ::-webkit-scrollbar-thumb {
+     background: var(--scroll-thumb);
+     border-radius: 3px;
+   }
+   
+   ::-webkit-scrollbar-thumb:hover {
+     background: var(--scroll-thumb-hover);
+   }
+   
+   /* ---------- Misc ---------- */
+   table tr:hover td {
+     background: var(--card-hover);
+   }
+   
+   select {
+     appearance: auto;
+   }
+   
