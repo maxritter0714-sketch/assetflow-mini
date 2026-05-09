@@ -1,0 +1,61 @@
+SEED_PORTFOLIOS = [
+    {"id": "port-1", "name": "US Tech", "currency": "USD"},
+    {"id": "port-2", "name": "Global Dividend", "currency": "USD"},
+]
+
+SEED_HOLDINGS = [
+    {
+        "symbol": "NVDA",
+        "name": "NVIDIA Corporation",
+        "shares": 10.0,
+        "avg_price": 400.0,
+        "current_price": 480.0,
+        "sector": "Technology",
+        "portfolio_id": "port-1",
+    },
+    {
+        "symbol": "AAPL",
+        "name": "Apple Inc.",
+        "shares": 20.0,
+        "avg_price": 170.0,
+        "current_price": 185.0,
+        "sector": "Technology",
+        "portfolio_id": "port-1",
+    },
+    {
+        "symbol": "MSFT",
+        "name": "Microsoft Corporation",
+        "shares": 15.0,
+        "avg_price": 380.0,
+        "current_price": 420.0,
+        "sector": "Technology",
+        "portfolio_id": "port-1",
+    },
+    {
+        "symbol": "JNJ",
+        "name": "Johnson & Johnson",
+        "shares": 25.0,
+        "avg_price": 155.0,
+        "current_price": 148.0,
+        "sector": "Healthcare",
+        "portfolio_id": "port-2",
+    },
+    {
+        "symbol": "VZ",
+        "name": "Verizon Communications",
+        "shares": 40.0,
+        "avg_price": 42.0,
+        "current_price": 38.0,
+        "sector": "Communication Services",
+        "portfolio_id": "port-2",
+    },
+    {
+        "symbol": "KO",
+        "name": "The Coca-Cola Company",
+        "shares": 30.0,
+        "avg_price": 60.0,
+        "current_price": 65.0,
+        "sector": "Consumer Staples",
+        "portfolio_id": "port-2",
+    },
+]
