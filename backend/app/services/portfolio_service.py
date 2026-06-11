@@ -1,10 +1,24 @@
 from decimal import ROUND_HALF_UP, Decimal
 
+from sqlalchemy.orm import Session
+
+from app.models.portfolio import Portfolio as PortfolioModel
+from app.models.portfolio import Transaction
 from app.schemas.portfolio import HoldingSummary, PortfolioItem, PortfolioSummary
 from app.seeds import SEED_HOLDINGS, SEED_PORTFOLIOS
 
 _CENTS = Decimal("0.01")
 _HUNDRED = Decimal("100")
+
+# Phase 5 placeholder: replaced by yfinance market data cache lookup
+_STATIC_PRICES: dict[str, float] = {
+    "NVDA": 480.0,
+    "AAPL": 185.0,
+    "MSFT": 420.0,
+    "JNJ": 148.0,
+    "VZ": 38.0,
+    "KO": 65.0,
+}
 
 
 def _d(value: float | int) -> Decimal:
@@ -34,7 +48,7 @@ def calculate_gain_loss_pct(gain_loss: float, cost: float) -> float:
     return float(_quantize(_d(gain_loss) / _d(cost) * _HUNDRED))
 
 
-# --- Private builders use Decimal throughout to prevent inter-step rounding drift ---
+# --- Private builders ---
 
 def _build_holding(raw: dict) -> HoldingSummary:
     shares = _d(raw["shares"])
@@ -42,7 +56,7 @@ def _build_holding(raw: dict) -> HoldingSummary:
     current_price = _d(raw["current_price"])
 
     market_value = _quantize(shares * current_price)
-    cost = shares * avg_price  # full precision for subtraction
+    cost = shares * avg_price
     gain_loss = _quantize(market_value - cost)
     cost_rounded = _quantize(cost)
     gain_loss_pct = (
@@ -87,9 +101,9 @@ def _build_portfolio_item(portfolio_raw: dict, holdings: list[HoldingSummary]) -
     )
 
 
-def get_portfolio_summary() -> PortfolioSummary:
-    holdings = [_build_holding(h) for h in SEED_HOLDINGS]
-    portfolios = [_build_portfolio_item(p, holdings) for p in SEED_PORTFOLIOS]
+def _build_summary(portfolios_raw: list[dict], holdings_raw: list[dict]) -> PortfolioSummary:
+    holdings = [_build_holding(h) for h in holdings_raw]
+    portfolios = [_build_portfolio_item(p, holdings) for p in portfolios_raw]
 
     total_value = _quantize(sum((_d(p.value) for p in portfolios), Decimal("0")))
     total_cost = _quantize(sum((_d(p.cost) for p in portfolios), Decimal("0")))
@@ -107,3 +121,53 @@ def get_portfolio_summary() -> PortfolioSummary:
         portfolios=portfolios,
         holdings=holdings,
     )
+
+
+def get_portfolio_summary() -> PortfolioSummary:
+    return _build_summary(SEED_PORTFOLIOS, SEED_HOLDINGS)
+
+
+def _compute_holdings_from_transactions(transactions: list) -> list[dict]:
+    holdings_map: dict[tuple, dict] = {}
+    for t in transactions:
+        key = (t.portfolio_id, t.symbol)
+        if key not in holdings_map:
+            holdings_map[key] = {
+                "symbol": t.symbol,
+                "name": t.name,
+                "sector": t.sector,
+                "portfolio_id": t.portfolio_id,
+                "total_shares": 0.0,
+                "total_cost": 0.0,
+            }
+        if t.transaction_type == "buy":
+            holdings_map[key]["total_shares"] += t.shares
+            holdings_map[key]["total_cost"] += t.shares * t.price_per_share
+        elif t.transaction_type == "sell":
+            holdings_map[key]["total_shares"] -= t.shares
+
+    result = []
+    for h in holdings_map.values():
+        if h["total_shares"] <= 0:
+            continue
+        avg_price = h["total_cost"] / h["total_shares"]
+        result.append({
+            "symbol": h["symbol"],
+            "name": h["name"],
+            "shares": h["total_shares"],
+            "avg_price": avg_price,
+            "current_price": _STATIC_PRICES.get(h["symbol"], avg_price),
+            "sector": h["sector"],
+            "portfolio_id": h["portfolio_id"],
+        })
+    return result
+
+
+def get_portfolio_summary_db(db: Session) -> PortfolioSummary:
+    portfolios_raw = [
+        {"id": p.id, "name": p.name, "currency": p.currency}
+        for p in db.query(PortfolioModel).all()
+    ]
+    transactions = db.query(Transaction).all()
+    holdings_raw = _compute_holdings_from_transactions(transactions)
+    return _build_summary(portfolios_raw, holdings_raw)

@@ -1,9 +1,26 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import routes_health, routes_portfolio
+from app.core.config import SessionLocal
+from app.scripts.seed import seed_db
 
-app = FastAPI(title="AssetFlow Mini API")
+
+# TODO (prod): remove auto-seeding before deploying with real user data.
+# Replace with a one-shot CLI command (e.g. uv run python -m app.scripts.seed).
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db = SessionLocal()
+    try:
+        seed_db(db)
+    finally:
+        db.close()
+    yield
+
+
+app = FastAPI(title="AssetFlow Mini API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
