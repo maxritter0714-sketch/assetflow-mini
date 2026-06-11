@@ -8,17 +8,22 @@ Do not rely on memory of previous sessions — always re-read it.
 
 ---
 
-## Non-Negotiable Rules (always apply)
+## Rules (always apply)
 
 - Do NOT modify the frontend unless explicitly asked.
-- Do NOT add a database (no SQLAlchemy, Alembic, PostgreSQL).
-- Do NOT add AI or Ollama.
 - Do NOT add: Hermes, MCP, LangGraph, Celery, Redis, Supabase, Firebase.
 - Do NOT implement real trading or broker integration.
-- Do NOT add authentication.
 - Keep changes small and easy to review.
 - Do not commit to main or dev directly.
 - Do not create git commits unless explicitly asked to do so.
+
+## Phase Gates (not permanent — add when the roadmap phase is reached)
+
+- **Database (Phase 3):** PostgreSQL + SQLAlchemy + Alembic. Do not add before Phase 3.
+- **Authentication (Phase TBD):** No auth system yet. Add only if explicitly scoped.
+- **AI / Ollama (Phase 9):** Local LLM summaries via Ollama. Do not add before Phase 9.
+- **yfinance / market data (Phase 5):** Do not add before Phase 5.
+- **GDELT / news (Phase 6):** Do not add before Phase 6.
 
 ---
 

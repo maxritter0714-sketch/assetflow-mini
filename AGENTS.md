@@ -2,15 +2,13 @@
 
 ## Project Goal
 
-AssetFlow Mini is a portfolio dashboard with local AI-assisted analysis.
+AssetFlow Mini is a full-stack portfolio dashboard with local AI-assisted analysis and quantitative analytics.
 
-The goal is to build a clean, understandable, GitHub-quality MVP with:
-- portfolio overview
-- watchlist
-- stock charts
-- stock/portfolio news
-- basic portfolio calculations
-- later: local AI summaries using Ollama
+It serves two purposes:
+1. **GitHub showcase** — demonstrating full-stack engineering depth and quantitative analysis skills to recruiters
+2. **Personal portfolio tool** — a real working app for tracking holdings and researching stocks
+
+It is also the foundation for a larger AssetFlow product that may go to market in the future.
 
 This project should stay focused and avoid unnecessary complexity.
 
@@ -24,9 +22,7 @@ frontend/
 
 The visual direction should be preserved unless explicitly requested otherwise.
 
-The backend is not fully implemented yet and should be created inside:
-
-backend/
+The backend foundation (Phase 2) is complete. Phase 3 (database) is next.
 
 ---
 
@@ -45,7 +41,7 @@ Planned frontend direction:
 - Refactor components gradually
 - Later optionally migrate to TypeScript
 - Use TradingView Lightweight Charts for candlestick charts later
-- Keep API calls centralized
+- Keep API calls centralized in `frontend/src/lib/api.js`
 
 ### Backend
 
@@ -55,27 +51,30 @@ Use:
 - uv (for dependency management — do NOT use pip directly)
 - Pydantic
 - pytest + httpx (for testing)
+- SQLAlchemy + Alembic + PostgreSQL (Phase 3)
+- numpy + scipy + pandas (Phase 5, for quant analytics)
 
-Later:
-- SQLAlchemy
-- Alembic
-- PostgreSQL
+### Infrastructure
 
-Do not add the database in the first backend milestone.
+- PostgreSQL via Docker Compose (local, Phase 3)
+- Supabase planned for full AssetFlow product only — not AssetFlow Mini
 
 ### Data Sources
 
-Use later:
-- yfinance for market data
-- GDELT for news
+| Purpose | Source |
+|---|---|
+| Stock prices, history, fundamentals | yfinance (free) |
+| Stock screener | FMP free tier (API key via .env) |
+| Portfolio news + ticker news | FMP free tier |
+| Global macro / economy news | GDELT (free, filtered to financial themes) |
+| AI summaries | Ollama (local, Phase 9) |
 
 ### AI
 
-Use later:
-- Ollama via backend service
-- local LLM for portfolio summaries
-
-Do not add AI in the first backend milestone.
+- Ollama via backend service (Phase 9)
+- Default model: `llama3.2` — configurable via env var
+- Narrative summaries only — no AI-generated scores or numbers
+- AI must be grounded in backend-provided data
 
 ---
 
@@ -92,19 +91,30 @@ backend/
 │   ├── api/
 │   │   ├── __init__.py
 │   │   ├── routes_health.py
-│   │   └── routes_portfolio.py
+│   │   ├── routes_portfolio.py
+│   │   ├── routes_market.py        ← Phase 5
+│   │   ├── routes_news.py          ← Phase 6
+│   │   ├── routes_analytics.py     ← Phase 5/8
+│   │   └── routes_ai.py            ← Phase 9
 │   ├── core/
 │   │   └── __init__.py
+│   ├── models/
+│   │   └── ...                     ← Phase 3
 │   ├── schemas/
 │   │   ├── __init__.py
 │   │   └── portfolio.py
 │   ├── services/
 │   │   ├── __init__.py
-│   │   └── portfolio_service.py
+│   │   ├── portfolio_service.py
+│   │   ├── market_data_service.py  ← Phase 5
+│   │   ├── news_service.py         ← Phase 6
+│   │   ├── analytics_service.py    ← Phase 5/8
+│   │   └── ai_service.py           ← Phase 9
 │   └── utils/
 │       └── __init__.py
 ├── tests/
-│   └── test_portfolio_service.py
+│   ├── test_portfolio_service.py
+│   └── test_analytics_service.py   ← Phase 5/8
 ├── pyproject.toml
 └── README.md
 ```
@@ -113,8 +123,8 @@ Rules:
 - Routes go in backend/app/api.
 - Business logic goes in backend/app/services.
 - Pydantic schemas go in backend/app/schemas.
-- Config belongs in backend/app/core.
-- Reusable calculations can go in backend/app/utils.
+- Config and DB session belong in backend/app/core.
+- SQLAlchemy models go in backend/app/models.
 - Tests go in backend/tests.
 - Keep endpoints small. Routes should call service functions.
 - Do not put business logic directly into route files unless it is trivial.
@@ -129,29 +139,81 @@ Rules:
 - Preserve the imported Claude Design visuals.
 - Do not randomly redesign the UI.
 - Do not fetch data directly from many different components.
-- Centralize backend API calls later in frontend/src/lib/api.js.
+- Centralize backend API calls in frontend/src/lib/api.js.
 - Keep chart/data/portfolio logic separate from presentational components where possible.
 - Avoid large unnecessary rewrites.
+
+### Analytics Screen
+
+A dedicated Analytics screen lives in the sidebar alongside the existing screens.
+
+Split:
+- **Portfolio Detail screen** — Sharpe ratio, annualised volatility, max drawdown, beta, correlation matrix heatmap
+- **Analytics screen** — Monte Carlo simulation (projection chart + confidence intervals), Efficient Frontier (interactive chart), VaR (95% confidence)
+
+---
+
+## Quantitative Analytics Scope
+
+### Included in AssetFlow Mini
+
+**Basics:**
+- Sharpe ratio
+- Annualised volatility
+- Max drawdown
+- Correlation matrix
+
+**Mid-tier:**
+- Monte Carlo simulation (portfolio projection)
+- Value at Risk (VaR, 95%)
+- Beta calculation
+
+**Strong (capstone):**
+- Efficient Frontier / mean-variance optimization (Markowitz)
+
+### Deferred to Full AssetFlow Product
+
+- Black-Litterman
+- CVaR (Conditional Value at Risk)
+- Regime detection
+
+---
+
+## Caching Strategy
+
+All external API responses (yfinance, FMP, GDELT) are cached in a `market_data_cache` database table.
+
+| Data type | TTL |
+|---|---|
+| Stock quote | 5 minutes |
+| Historical OHLCV | 1 hour |
+| Fundamentals | 24 hours |
+| News | 15 minutes |
+| Screener results | 1 hour |
+
+If cached data exists but is stale and the external API fails, return the stale data with a `"stale": true` flag.
+If no cache exists and the external API fails, return a proper error.
+
+Redis is planned for the full AssetFlow product as an L1 cache layer in front of this pattern.
 
 ---
 
 ## MVP Scope
 
-The MVP should include:
-
 1. Frontend dashboard running locally
 2. Backend health endpoint
-3. Portfolio summary endpoint with seeded data
-4. Basic portfolio calculation service
-5. Basic backend tests
-6. Later: yfinance stock history endpoint
-7. Later: frontend connected to backend
-8. Later: GDELT news endpoint
-9. Later: Ollama AI summary endpoint
+3. Portfolio summary with database-backed holdings
+4. Manual transaction entry (buy/sell) — CSV import added later
+5. Market data via yfinance (prices, history, fundamentals)
+6. Stock screener via FMP
+7. Three news tabs: global macro (GDELT), portfolio (FMP), ticker (FMP)
+8. Quant analytics: Sharpe, VaR, Monte Carlo, Efficient Frontier
+9. AI narrative summaries via Ollama
+10. Full test coverage — statistical validation for quant calculations
 
 ---
 
-## Things Not To Add Yet
+## Things Not To Add
 
 Do not add these unless explicitly requested:
 
@@ -159,20 +221,16 @@ Do not add these unless explicitly requested:
 - MCP server
 - LangGraph
 - Celery
-- Redis
-- Supabase
+- Redis (AssetFlow Mini — use DB cache instead)
+- Supabase (AssetFlow Mini — PostgreSQL via Docker)
 - Firebase
 - Kubernetes
-- broker APIs
-- real trading functionality
-- paid finance APIs
-- full authentication system
-- complex RAG/vector database
-- microservices
-- SQLAlchemy / Alembic / PostgreSQL (first milestone)
-- AI / Ollama (first milestone)
-
-These may be useful later, but they are not part of the MVP foundation.
+- Broker APIs
+- Real trading functionality
+- Full authentication system
+- Complex RAG / vector database
+- Microservices
+- Black-Litterman, CVaR, regime detection (full AssetFlow only)
 
 ---
 
@@ -191,6 +249,8 @@ Avoid hard commands like:
 - "Sell this stock"
 - "You should invest in..."
 
+AI output must be grounded in backend-provided data. The model must not invent prices, metrics, news, ratings, or recommendations.
+
 ---
 
 ## Review Checklist
@@ -201,7 +261,8 @@ Before accepting changes, check:
 - Did it avoid unnecessary dependencies?
 - Are backend routes and services separated?
 - Are calculations testable?
-- Are errors handled reasonably?
+- Are quant calculations statistically validated in tests?
+- Are errors handled reasonably (stale cache flag + proper errors)?
 - Did it preserve the frontend design?
 - Did it avoid overengineering?
 - Are files placed in the correct folders?
