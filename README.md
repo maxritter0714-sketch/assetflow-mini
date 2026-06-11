@@ -6,9 +6,9 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-A full-stack portfolio dashboard with quantitative analytics and local AI-assisted insights — built as both a personal finance tool and a technical showcase.
+A full-stack portfolio management and research platform with quantitative analytics and local AI-assisted insights — built as both a personal finance tool and a technical showcase.
 
-The analytics layer targets real quantitative methods: Sharpe ratio, Value at Risk, Monte Carlo simulation, and Markowitz mean-variance optimization (Efficient Frontier). Market data is cached in PostgreSQL with per-type TTLs to avoid redundant external API calls. AI summaries run locally via Ollama — no third-party LLM calls, no data leaves the machine.
+The frontend is a multi-screen fintech application: candlestick charts with multiple timeframes and modes, a fundamentals grid, an AI score ring, a stock screener, portfolio performance charts, and sector allocation breakdowns. The backend is a FastAPI service backed by PostgreSQL, with planned integration of yfinance for live market data, FMP and GDELT for news, and a full quantitative analytics layer (Sharpe ratio, VaR, Monte Carlo simulation, Efficient Frontier). AI narrative summaries run locally via Ollama — no third-party LLM calls, no data leaves the machine.
 
 **Status:** Active development — Phase 4 complete (transaction entry). Phase 5 (live market data) is next.
 
@@ -47,20 +47,75 @@ All external API responses (prices, news, screener) are cached in a `market_data
 
 ---
 
-## What it does
+## Features
 
-**Live (Phases 1–4)**
-- Multi-portfolio overview with total value, cost basis, unrealised P&L, and daily change
-- Sector and country allocation breakdowns
-- Manual transaction entry (buy / sell) with validation
-- Interactive UI: dashboard, portfolio detail, watchlist, screener, transactions, ticker detail
+### Live (Phases 1–4)
 
-**Planned**
-- Live prices and OHLCV history via yfinance with DB-backed caching
-- Stock screener via FMP free tier
-- Three news tabs: global macro (GDELT), portfolio news, ticker news (FMP)
-- Quant analytics: Sharpe ratio, annualised volatility, max drawdown, beta, VaR (95%), Monte Carlo simulation, Efficient Frontier
-- Local AI narrative summaries via Ollama (`llama3.2`) — grounded in backend data, no invented numbers
+**Dashboard**
+- Multi-portfolio KPI cards: total value, cost basis, unrealised P&L, daily change
+- Sector and country allocation donut charts
+- Top holdings breakdown with sparklines and mini bar charts
+- Dividend forecast and target vs. actual allocation view
+
+**Portfolio Detail**
+- Holdings table: shares, average buy price, current price, market value, daily %, unrealised %, allocation weight
+- Performance line chart with 5 timeframes (1M / 3M / 6M / 1Y / All)
+- Sector allocation breakdown
+- AI narrative summary card with headline and per-bullet sentiment tones (good / watch)
+- Recent transactions sidebar with one-click add
+
+**Ticker Detail**
+- Candlestick chart with 3 modes (Candle / Line / Area) and per-mode timeframe switching (30m → 1M for candles; 1W → Max for line)
+- 52-week high/low overlay and distance-from-high indicator
+- Key statistics grid: market cap, P/E, EPS, beta, 52W range, dividend yield, revenue growth
+- Fundamentals grid: revenue, net income, FCF, ROE, gross margin, operating margin, net margin, D/E
+- AI score ring (0–100) with five dimensions: Growth, Profitability, Momentum, Value, Risk
+- 12-month analyst price target with upside %
+- News feed with per-item sentiment badges
+- Your position card: market value, unrealised gain, shares, avg buy, cost basis, portfolio weight
+
+**Screener**
+- Filterable by sector and market cap tier
+- AI quality score column per ticker
+- Click-through to Ticker Detail from any row
+
+**Transactions**
+- Full transaction history (buy / sell)
+- Manual entry with validation via backend API
+
+**Other**
+- Watchlist screen
+- Settings screen
+- Light / dark theme toggle across all screens
+
+---
+
+### Planned
+
+**Phase 5 — Live market data**
+- Real-time quotes and OHLCV history via yfinance, replacing all mock data
+- DB-backed cache with per-type TTLs (5 min quotes · 1 hr history · 24 hr fundamentals)
+- Stale-cache fallback with `"stale": true` flag if the external API is down
+- `GET /api/market/quote/{symbol}` and `GET /api/market/history/{symbol}` endpoints
+
+**Phase 6 — News and screener**
+- Stock screener results sourced from FMP free tier
+- Three live news tabs: global macro (GDELT), portfolio news (FMP), ticker news (FMP)
+- 15-minute news cache
+
+**Phase 7–8 — Quantitative analytics**
+- Portfolio Detail: Sharpe ratio, annualised volatility, max drawdown, beta, correlation matrix heatmap
+- Dedicated Analytics screen: Monte Carlo simulation (projection + confidence intervals), Efficient Frontier / mean-variance optimisation (Markowitz), Value at Risk (95%)
+- Full statistical test coverage for all quant calculations
+
+**Phase 9 — Local AI**
+- Narrative summaries via Ollama (`llama3.2`) running fully locally
+- Summaries grounded in backend-provided data — model cannot invent prices, metrics, or ratings
+- Replaces the mocked AI summary cards already wired into the UI
+
+**Later**
+- CSV transaction import
+- Frontend wired to live backend (all screens currently use static mock data)
 
 ---
 
