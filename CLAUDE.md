@@ -190,6 +190,10 @@ If commands differ from these, explain clearly why.
 - Do not commit directly to `main` or `dev`.
 - Do not create git commits unless explicitly asked.
 - Branch flow: `feature/...` → PR → `dev` → PR → `main`
+- Always use Conventional Commits for commit messages: https://www.conventionalcommits.org/en/v1.0.0/
+  - Format: `type(scope): description`
+  - Types: `feat`, `fix`, `test`, `chore`, `refactor`, `docs`, `style`, `perf`
+  - Examples: `feat(backend): add transaction endpoints`, `fix(backend): replace deprecated utcnow`
 
 ---
 
