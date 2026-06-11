@@ -16,7 +16,7 @@ The frontend is a multi-screen fintech application: candlestick charts with mult
 
 ## Screenshot
 
-<!-- Add a screenshot of the dashboard here once the app is running -->
+![AssetFlow Mini Dashboard](.github/assets/screenshot-dashboard.png)
 
 ---
 
