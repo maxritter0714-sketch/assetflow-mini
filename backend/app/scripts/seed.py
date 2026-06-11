@@ -5,9 +5,12 @@ from sqlalchemy.orm import Session
 
 from app.models.portfolio import Portfolio, Transaction
 
+_PORTFOLIO_US_TECH_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+_PORTFOLIO_GLOBAL_DIV_ID = "9a8b7c6d-5e4f-3a2b-1c0d-e9f8a7b6c5d4"
+
 _PORTFOLIOS = [
-    {"id": "port-1", "name": "US Tech", "currency": "USD"},
-    {"id": "port-2", "name": "Global Dividend", "currency": "USD"},
+    {"id": _PORTFOLIO_US_TECH_ID, "name": "US Tech", "currency": "USD"},
+    {"id": _PORTFOLIO_GLOBAL_DIV_ID, "name": "Global Dividend", "currency": "USD"},
 ]
 
 _TRANSACTIONS = [
@@ -17,7 +20,7 @@ _TRANSACTIONS = [
         "shares": 10.0,
         "price_per_share": 400.0,
         "sector": "Technology",
-        "portfolio_id": "port-1",
+        "portfolio_id": _PORTFOLIO_US_TECH_ID,
     },
     {
         "symbol": "AAPL",
@@ -25,7 +28,7 @@ _TRANSACTIONS = [
         "shares": 20.0,
         "price_per_share": 170.0,
         "sector": "Technology",
-        "portfolio_id": "port-1",
+        "portfolio_id": _PORTFOLIO_US_TECH_ID,
     },
     {
         "symbol": "MSFT",
@@ -33,7 +36,7 @@ _TRANSACTIONS = [
         "shares": 15.0,
         "price_per_share": 380.0,
         "sector": "Technology",
-        "portfolio_id": "port-1",
+        "portfolio_id": _PORTFOLIO_US_TECH_ID,
     },
     {
         "symbol": "JNJ",
@@ -41,7 +44,7 @@ _TRANSACTIONS = [
         "shares": 25.0,
         "price_per_share": 155.0,
         "sector": "Healthcare",
-        "portfolio_id": "port-2",
+        "portfolio_id": _PORTFOLIO_GLOBAL_DIV_ID,
     },
     {
         "symbol": "VZ",
@@ -49,7 +52,7 @@ _TRANSACTIONS = [
         "shares": 40.0,
         "price_per_share": 42.0,
         "sector": "Communication Services",
-        "portfolio_id": "port-2",
+        "portfolio_id": _PORTFOLIO_GLOBAL_DIV_ID,
     },
     {
         "symbol": "KO",
@@ -57,7 +60,7 @@ _TRANSACTIONS = [
         "shares": 30.0,
         "price_per_share": 60.0,
         "sector": "Consumer Staples",
-        "portfolio_id": "port-2",
+        "portfolio_id": _PORTFOLIO_GLOBAL_DIV_ID,
     },
 ]
 
