@@ -49,3 +49,4 @@ lerna-debug.log*
 
 # Agent local settings
 .claude/settings.local.json
+.claude/sessions/
