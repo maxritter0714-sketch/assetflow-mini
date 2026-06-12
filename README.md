@@ -8,9 +8,9 @@
 
 A full-stack portfolio management and research platform with quantitative analytics and local AI-assisted insights — built as both a personal finance tool and a technical showcase.
 
-The frontend is a multi-screen fintech application: candlestick charts with multiple timeframes and modes, a fundamentals grid, an AI score ring, a stock screener, portfolio performance charts, and sector allocation breakdowns. The backend is a FastAPI service backed by PostgreSQL, with planned integration of yfinance for live market data, FMP and GDELT for news, and a full quantitative analytics layer (Sharpe ratio, VaR, Monte Carlo simulation, Efficient Frontier). AI narrative summaries run locally via Ollama — no third-party LLM calls, no data leaves the machine.
+The frontend is a multi-screen fintech application: candlestick charts with multiple timeframes and modes, a fundamentals grid, an AI score ring, a stock screener, portfolio performance charts, and sector allocation breakdowns. The backend is a FastAPI service backed by PostgreSQL, with live market data via yfinance (DB-cached), FMP and GDELT for news (planned), and a full quantitative analytics layer (Sharpe ratio, VaR, Monte Carlo simulation, Efficient Frontier, planned). AI narrative summaries will run locally via Ollama — no third-party LLM calls, no data leaves the machine.
 
-**Status:** Active development — Phase 4 complete (transaction entry). Phase 5 (live market data) is next.
+**Status:** Active development — Phase 5 complete (live market data via yfinance). Phase 6 (news + screener) is next.
 
 ---
 
@@ -34,7 +34,7 @@ graph TD
 
     FE -->|REST| BE
     BE --> DB
-    BE -->|Phase 5| YF
+    BE --> YF
     BE -->|Phase 6| FMP
     BE -->|Phase 6| GDELT
     BE -->|Phase 9| OLLAMA
@@ -49,7 +49,7 @@ All external API responses (prices, news, screener) are cached in a `market_data
 
 ## Features
 
-### Live (Phases 1–4)
+### Live (Phases 1–5)
 
 **Dashboard**
 - Multi-portfolio KPI cards: total value, cost basis, unrealised P&L, daily change
@@ -83,6 +83,12 @@ All external API responses (prices, news, screener) are cached in a `market_data
 - Full transaction history (buy / sell)
 - Manual entry with validation via backend API
 
+**Market Data (Phase 5)**
+- Live quotes and OHLCV history via yfinance
+- DB-backed cache with TTLs: 5 min for quotes, 1 hr for history
+- Stale-cache fallback with `"stale": true` flag if the upstream API is down
+- Dashboard and Transactions screens wired to live backend data
+
 **Other**
 - Watchlist screen
 - Settings screen
@@ -91,12 +97,6 @@ All external API responses (prices, news, screener) are cached in a `market_data
 ---
 
 ### Planned
-
-**Phase 5 — Live market data**
-- Real-time quotes and OHLCV history via yfinance, replacing all mock data
-- DB-backed cache with per-type TTLs (5 min quotes · 1 hr history · 24 hr fundamentals)
-- Stale-cache fallback with `"stale": true` flag if the external API is down
-- `GET /api/market/quote/{symbol}` and `GET /api/market/history/{symbol}` endpoints
 
 **Phase 6 — News and screener**
 - Stock screener results sourced from FMP free tier
@@ -115,7 +115,7 @@ All external API responses (prices, news, screener) are cached in a `market_data
 
 **Later**
 - CSV transaction import
-- Frontend wired to live backend (all screens currently use static mock data)
+- Wire remaining screens (Ticker Detail, Screener, Portfolio Detail) to live backend data
 
 ---
 
@@ -176,15 +176,17 @@ docker compose up -d
 
 ### 2. Set up the backend
 
-```bash
-cd backend
-uv sync
-```
-
-Copy the example env file and fill in your values:
+Copy the example env file at the repo root and fill in your values:
 
 ```bash
 cp .env.example .env
+```
+
+Then install backend dependencies:
+
+```bash
+cd backend
+uv sync
 ```
 
 Run migrations and seed sample data:
@@ -224,6 +226,8 @@ Frontend available at `http://localhost:5173`.
 | `GET` | `/api/transactions` | List transactions (optional `?portfolio_id=` filter) |
 | `POST` | `/api/transactions` | Record a buy or sell transaction |
 | `DELETE` | `/api/transactions/{id}` | Delete a transaction |
+| `GET` | `/api/market/quote/{symbol}` | Live quote (DB-cached, 5 min TTL) |
+| `GET` | `/api/market/history/{symbol}` | OHLCV bars (DB-cached, 1 hr TTL) — `?period=1mo\|3mo\|6mo\|1y\|2y\|5y` |
 
 ---
 
@@ -244,8 +248,8 @@ uv run pytest
 | 2 | FastAPI backend foundation | Done |
 | 3 | PostgreSQL + SQLAlchemy + Alembic | Done |
 | 4 | Manual transaction entry | Done |
-| 5 | Live market data via yfinance | Next |
-| 6 | Stock screener + news (FMP, GDELT) | Planned |
+| 5 | Live market data via yfinance | Done |
+| 6 | Stock screener + news (FMP, GDELT) | Next |
 | 7–8 | Quant analytics (Sharpe, VaR, Monte Carlo, Efficient Frontier) | Planned |
 | 9 | Local AI summaries via Ollama | Planned |
 
