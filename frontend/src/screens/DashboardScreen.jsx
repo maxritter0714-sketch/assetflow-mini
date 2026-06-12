@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ThemeToggle } from "../theme-toggle.jsx";
 import { AF_DATA } from "../data.jsx";
 import {
@@ -11,14 +12,36 @@ import {
   fmtPct,
 } from "../components.jsx";
 import { cardStyles, mainStyles, tableStyles } from "../styles.js";
+import { fetchPortfolioSummary } from "../lib/api.js";
 
 export function DashboardScreen({ setScreen, setSelectedTicker, setTickerBackScreen, theme, setTheme }) {
-  const { PORTFOLIOS, TOP_HOLDINGS, ALLOCATION_DATA, TARGET_VS_ACTUAL, DIVIDEND_FORECAST } = AF_DATA;
-  const totalValue = PORTFOLIOS.reduce((s, p) => s + p.value, 0);
-  const totalCost = PORTFOLIOS.reduce((s, p) => s + p.cost, 0);
-  const unrealizedPL = totalValue - totalCost;
-  const dailyChange = totalValue * 0.0084;
+  const { PORTFOLIOS, ALLOCATION_DATA, TARGET_VS_ACTUAL, DIVIDEND_FORECAST } = AF_DATA;
+  const [summary, setSummary] = useState(null);
+
+  useEffect(() => {
+    fetchPortfolioSummary().then(setSummary).catch(() => {});
+  }, []);
+
+  const mockValue = PORTFOLIOS.reduce((s, p) => s + p.value, 0);
+  const mockCost  = PORTFOLIOS.reduce((s, p) => s + p.cost, 0);
+  const totalValue   = summary?.totalValue    ?? mockValue;
+  const totalCost    = summary?.totalCost     ?? mockCost;
+  const unrealizedPL = summary?.unrealizedPl  ?? (totalValue - totalCost);
+  const dailyChange  = totalValue * 0.0084;
   const projDivs = DIVIDEND_FORECAST.reduce((s, d) => s + d.amount, 0);
+
+  const topHoldings = summary
+    ? summary.holdings
+        .sort((a, b) => b.marketValue - a.marketValue)
+        .map(h => ({
+          symbol: h.symbol,
+          name: h.name,
+          value: h.marketValue,
+          cost: h.marketValue - h.gainLoss,
+          allocation: Math.round((h.marketValue / summary.totalValue) * 1000) / 10,
+          gainPct: h.gainLossPct,
+        }))
+    : AF_DATA.TOP_HOLDINGS;
 
   return (
     <div style={mainStyles.page}>
@@ -114,8 +137,8 @@ export function DashboardScreen({ setScreen, setSelectedTicker, setTickerBackScr
             </tr>
           </thead>
           <tbody>
-            {TOP_HOLDINGS.map((h, i) => {
-              const cb = Math.round(h.value / (1 + h.gainPct/100));
+            {topHoldings.map((h, i) => {
+              const cb = h.cost != null ? Math.round(h.cost) : Math.round(h.value / (1 + h.gainPct / 100));
               const daily = (i % 2 === 0 ? 1 : -1) * (0.4 + i * 0.18);
               return (
                 <tr key={h.symbol} style={{ ...tableStyles.row, cursor: "pointer" }} onClick={() => { setSelectedTicker(h.symbol); setTickerBackScreen("portfolio"); setScreen("ticker-detail"); }}>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ThemeToggle } from "../theme-toggle.jsx";
 import { AF_DATA } from "../data.jsx";
 import {
@@ -11,24 +11,64 @@ import {
 } from "../components.jsx";
 import { cardStyles, mainStyles, tableStyles } from "../styles.js";
 import { filterGroupStyle, filterLabelStyle, inputStyles } from "./secondaryShared.js";
+import { fetchPortfolioSummary, fetchTransactions } from "../lib/api.js";
+
+function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
 export function TransactionsScreen({ theme, setTheme }) {
-  const { ALL_TRANSACTIONS, CASHFLOW_TIMELINE } = AF_DATA;
+  const { CASHFLOW_TIMELINE } = AF_DATA;
+  const [transactions, setTransactions] = useState(null);
+  const [portfolioNames, setPortfolioNames] = useState({});
   const [typeFilter, setTypeFilter] = React.useState("All");
   const [portfolioFilter, setPortfolioFilter] = React.useState("All");
-  const types = ["All", "Buy", "Sell", "Dividend"];
-  const portfolios = ["All", "Tech Growth", "Dividend Growth", "ETF Core", "Crypto & Speculative"];
 
-  const filtered = ALL_TRANSACTIONS.filter(tx => {
+  useEffect(() => {
+    fetchPortfolioSummary()
+      .then(s => {
+        const map = {};
+        s.portfolios.forEach(p => { map[p.id] = p.name; });
+        setPortfolioNames(map);
+      })
+      .catch(() => {});
+
+    fetchTransactions()
+      .then(data => {
+        const mapped = data.map(tx => ({
+          id: tx.id,
+          date: tx.transactionDate,
+          type: capitalize(tx.transactionType),
+          symbol: tx.symbol,
+          name: tx.name,
+          shares: tx.shares,
+          price: tx.pricePerShare,
+          fees: 0,
+          portfolioId: tx.portfolioId,
+        }));
+        setTransactions(mapped);
+      })
+      .catch(() => {});
+  }, []);
+
+  const allTx = transactions ?? AF_DATA.ALL_TRANSACTIONS;
+  const portfolioList = transactions
+    ? ["All", ...Object.values(portfolioNames)]
+    : ["All", "Tech Growth", "Dividend Growth", "ETF Core", "Crypto & Speculative"];
+
+  const types = ["All", "Buy", "Sell", "Dividend"];
+
+  const txPortfolioName = (tx) =>
+    tx.portfolioId ? (portfolioNames[tx.portfolioId] ?? tx.portfolioId) : (tx.portfolio ?? "");
+
+  const filtered = allTx.filter(tx => {
     if (typeFilter !== "All" && tx.type !== typeFilter) return false;
-    if (portfolioFilter !== "All" && tx.portfolio !== portfolioFilter) return false;
+    if (portfolioFilter !== "All" && txPortfolioName(tx) !== portfolioFilter) return false;
     return true;
   });
 
-  const totalInvested = ALL_TRANSACTIONS.filter(t => t.type === "Buy").reduce((s, t) => s + t.shares * t.price, 0);
-  const realized = ALL_TRANSACTIONS.filter(t => t.type === "Sell").reduce((s, t) => s + t.shares * t.price * 0.12, 0);
-  const divs = ALL_TRANSACTIONS.filter(t => t.type === "Dividend").reduce((s, t) => s + t.shares * t.price, 0);
-  const fees = ALL_TRANSACTIONS.reduce((s, t) => s + t.fees, 0);
+  const totalInvested = allTx.filter(t => t.type === "Buy").reduce((s, t) => s + t.shares * t.price, 0);
+  const realized = allTx.filter(t => t.type === "Sell").reduce((s, t) => s + t.shares * t.price * 0.12, 0);
+  const divs = allTx.filter(t => t.type === "Dividend").reduce((s, t) => s + t.shares * t.price, 0);
+  const fees = allTx.reduce((s, t) => s + (t.fees ?? 0), 0);
 
   const txColor = (t) => t === "Buy" ? "var(--success)" : t === "Sell" ? "var(--danger)" : "var(--blue)";
 
@@ -49,7 +89,7 @@ export function TransactionsScreen({ theme, setTheme }) {
       <div style={{ display: "flex", gap: 14, marginBottom: 16 }}>
         <KpiCard label="Total Invested" value={fmtMoney(Math.round(totalInvested))} accent="linear-gradient(90deg,#10b981,#34d399)" />
         <KpiCard label="Realized Gains" value={"+" + fmtMoney(Math.round(realized))} sub={fmtPct(realized/totalInvested*100)} positive={true} accent="linear-gradient(90deg,#06b6d4,#67e8f9)" />
-        <KpiCard label="Dividends Received" value={fmtMoney(Math.round(divs))} sub={ALL_TRANSACTIONS.filter(t=>t.type==="Dividend").length + " payments"} accent="linear-gradient(90deg,#6366f1,#a5b4fc)" />
+        <KpiCard label="Dividends Received" value={fmtMoney(Math.round(divs))} sub={allTx.filter(t=>t.type==="Dividend").length + " payments"} accent="linear-gradient(90deg,#6366f1,#a5b4fc)" />
         <KpiCard label="Fees Paid" value={fmtMoney(Math.round(fees))} sub="across 15 trades" accent="linear-gradient(90deg,#94a3b8,#cbd5e1)" />
       </div>
 
@@ -89,7 +129,7 @@ export function TransactionsScreen({ theme, setTheme }) {
         <div style={filterGroupStyle}>
           <span style={filterLabelStyle}>Portfolio</span>
           <select value={portfolioFilter} onChange={e => setPortfolioFilter(e.target.value)} style={inputStyles.select}>
-            {portfolios.map(p => <option key={p}>{p}</option>)}
+            {portfolioList.map(p => <option key={p}>{p}</option>)}
           </select>
         </div>
         <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--subtle)" }}>{filtered.length} transactions</span>
@@ -111,9 +151,9 @@ export function TransactionsScreen({ theme, setTheme }) {
           </thead>
           <tbody>
             {filtered.map((tx, i) => {
-              const total = tx.shares * tx.price + tx.fees;
+              const total = tx.shares * tx.price + (tx.fees ?? 0);
               return (
-                <tr key={i} style={tableStyles.row}>
+                <tr key={tx.id ?? i} style={tableStyles.row}>
                   <td style={{ ...tableStyles.td, fontFamily: "'JetBrains Mono', monospace", color: "var(--muted)", fontSize: 12 }}>{tx.date}</td>
                   <td style={{ ...tableStyles.td, textAlign: "center" }}>
                     <Badge variant={tx.type === "Buy" ? "green" : tx.type === "Sell" ? "red" : "blue"} dot>{tx.type}</Badge>
@@ -123,7 +163,7 @@ export function TransactionsScreen({ theme, setTheme }) {
                   <td style={{ ...tableStyles.td, textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{fmtPrice(tx.price)}</td>
                   <td style={{ ...tableStyles.td, textAlign: "right", fontFamily: "'JetBrains Mono', monospace", color: "var(--subtle)" }}>{tx.fees > 0 ? fmtPrice(tx.fees) : "—"}</td>
                   <td style={{ ...tableStyles.td, textAlign: "right", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: txColor(tx.type) }}>{tx.type === "Sell" ? "+" : tx.type === "Dividend" ? "+" : "−"}{fmtMoney(Math.round(total))}</td>
-                  <td style={{ ...tableStyles.td, color: "var(--muted)", fontSize: 12 }}>{tx.portfolio}</td>
+                  <td style={{ ...tableStyles.td, color: "var(--muted)", fontSize: 12 }}>{txPortfolioName(tx)}</td>
                 </tr>
               );
             })}
