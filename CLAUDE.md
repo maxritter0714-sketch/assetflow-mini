@@ -22,7 +22,7 @@ Do not rely on memory of previous sessions — always re-read it.
 - **Database (Phase 3):** PostgreSQL + SQLAlchemy + Alembic. Do not add before Phase 3.
 - **Authentication (Phase TBD):** No auth system yet. Add only if explicitly scoped.
 - **AI / Ollama (Phase 9):** Local LLM summaries via Ollama. Do not add before Phase 9.
-- **yfinance / market data (Phase 5):** Do not add before Phase 5.
+- **yfinance / market data (Phase 5):** Complete. yfinance is live.
 - **GDELT / news (Phase 6):** Do not add before Phase 6.
 
 ---
@@ -40,7 +40,7 @@ Your job is to make small, clean, reviewable code changes that follow the projec
 Build AssetFlow Mini as a clean portfolio dashboard with local AI-assisted analysis.
 
 Current priority:
-Create a minimal backend foundation without touching the existing frontend design.
+Phase 6 — news and screener integration (FMP free tier + GDELT).
 
 ---
 
@@ -52,7 +52,7 @@ frontend/
 
 The current frontend should not be rewritten or redesigned during backend work.
 
-The backend folder exists but still needs the initial FastAPI foundation.
+Phases 1–5 are complete. The backend has a running FastAPI service with PostgreSQL, transactions, portfolio summary, and live market data via yfinance (DB-cached).
 
 ---
 

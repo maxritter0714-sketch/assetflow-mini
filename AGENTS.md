@@ -22,7 +22,7 @@ frontend/
 
 The visual direction should be preserved unless explicitly requested otherwise.
 
-The backend foundation (Phase 2) is complete. Phase 3 (database) is next.
+Phase 5 (live market data via yfinance + DB cache) is complete. Phase 6 (news + screener via FMP and GDELT) is next.
 
 ---
 
