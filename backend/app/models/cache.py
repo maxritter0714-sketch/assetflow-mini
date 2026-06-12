@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, DateTime, Index, String, Text
 
@@ -13,7 +13,7 @@ class MarketDataCache(Base):
     data_type = Column(String(50), nullable=False)
     data = Column(Text, nullable=False)
     expires_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None))
 
     __table_args__ = (
         Index("ix_market_data_cache_key", "cache_key"),

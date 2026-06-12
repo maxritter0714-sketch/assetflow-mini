@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import routes_health, routes_portfolio, routes_transactions
+from app.api import routes_health, routes_market, routes_portfolio, routes_transactions
 from app.core.config import SessionLocal
 from app.scripts.seed import seed_db
 
@@ -32,3 +32,4 @@ app.add_middleware(
 app.include_router(routes_health.router)
 app.include_router(routes_portfolio.router, prefix="/api")
 app.include_router(routes_transactions.router, prefix="/api")
+app.include_router(routes_market.router, prefix="/api")
