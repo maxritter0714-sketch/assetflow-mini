@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -39,3 +41,20 @@ def db():
         yield session
     finally:
         session.close()
+
+
+@pytest.fixture(autouse=True)
+def _mock_yfinance():
+    """Block live yfinance network calls in all tests. Override per-test with patch()."""
+    mock_info = MagicMock()
+    mock_info.last_price = None
+
+    mock_hist = MagicMock()
+    mock_hist.empty = True
+
+    mock_ticker = MagicMock()
+    mock_ticker.fast_info = mock_info
+    mock_ticker.history.return_value = mock_hist
+
+    with patch("yfinance.Ticker", return_value=mock_ticker):
+        yield

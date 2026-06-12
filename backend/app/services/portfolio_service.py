@@ -6,19 +6,10 @@ from app.models.portfolio import Portfolio as PortfolioModel
 from app.models.portfolio import Transaction
 from app.schemas.portfolio import HoldingSummary, PortfolioItem, PortfolioSummary
 from app.seeds import SEED_HOLDINGS, SEED_PORTFOLIOS
+from app.services import market_data_service
 
 _CENTS = Decimal("0.01")
 _HUNDRED = Decimal("100")
-
-# Phase 5 placeholder: replaced by yfinance market data cache lookup
-_STATIC_PRICES: dict[str, float] = {
-    "NVDA": 480.0,
-    "AAPL": 185.0,
-    "MSFT": 420.0,
-    "JNJ": 148.0,
-    "VZ": 38.0,
-    "KO": 65.0,
-}
 
 
 def _d(value: float | int) -> Decimal:
@@ -127,7 +118,7 @@ def get_portfolio_summary() -> PortfolioSummary:
     return _build_summary(SEED_PORTFOLIOS, SEED_HOLDINGS)
 
 
-def _compute_holdings_from_transactions(transactions: list) -> list[dict]:
+def _compute_holdings_from_transactions(transactions: list, db: Session) -> list[dict]:
     holdings_map: dict[tuple, dict] = {}
     for t in transactions:
         key = (t.portfolio_id, t.symbol)
@@ -151,12 +142,13 @@ def _compute_holdings_from_transactions(transactions: list) -> list[dict]:
         if h["total_shares"] <= 0:
             continue
         avg_price = h["total_cost"] / h["total_shares"]
+        live_price, _ = market_data_service.get_current_price(h["symbol"], db)
         result.append({
             "symbol": h["symbol"],
             "name": h["name"],
             "shares": h["total_shares"],
             "avg_price": avg_price,
-            "current_price": _STATIC_PRICES.get(h["symbol"], avg_price),
+            "current_price": live_price if live_price is not None else avg_price,
             "sector": h["sector"],
             "portfolio_id": h["portfolio_id"],
         })
@@ -169,5 +161,5 @@ def get_portfolio_summary_db(db: Session) -> PortfolioSummary:
         for p in db.query(PortfolioModel).all()
     ]
     transactions = db.query(Transaction).all()
-    holdings_raw = _compute_holdings_from_transactions(transactions)
+    holdings_raw = _compute_holdings_from_transactions(transactions, db)
     return _build_summary(portfolios_raw, holdings_raw)
