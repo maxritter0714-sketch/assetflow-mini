@@ -1,6 +1,7 @@
 import React from "react";
 import { ThemeToggle } from "../theme-toggle.jsx";
 import { AF_DATA } from "../data.jsx";
+import { fetchFundamentals, fetchTickerNews } from "../lib/api.js";
 import {
   Badge,
   ScoreRing,
@@ -11,6 +12,17 @@ import {
 } from "../components.jsx";
 import { cardStyles, mainStyles } from "../styles.js";
 import { CandlestickMini } from "./CandlestickMini.jsx";
+
+function relativeTime(publishedAt) {
+  if (!publishedAt) return "—";
+  const date = new Date(publishedAt.replace(" ", "T"));
+  if (isNaN(date.getTime())) return publishedAt.slice(0, 10);
+  const diff = (Date.now() - date.getTime()) / 1000;
+  if (diff < 60) return "just now";
+  if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+  if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
+  return Math.floor(diff / 86400) + "d ago";
+}
 
 export function TickerDetailScreen({ setScreen, selectedTicker = "NVDA", tickerBackScreen = "watchlist", theme, setTheme }) {
   const stock = [...AF_DATA.SCREENER_STOCKS, ...AF_DATA.WATCHLIST_TICKERS].find(x => x.symbol === selectedTicker) || AF_DATA.SCREENER_STOCKS[0];
@@ -25,7 +37,30 @@ export function TickerDetailScreen({ setScreen, selectedTicker = "NVDA", tickerB
   const high52 = Math.max(...oneYearCandles.map(c => c.h));
   const low52 = Math.min(...oneYearCandles.map(c => c.l));
   const isNvda = stock.symbol === "NVDA";
-  const S = isNvda ? AF_DATA.NVDA_STATS : {
+
+  // --- hooks ---
+  const [liveNews, setLiveNews] = React.useState(null);
+  const [liveFundamentals, setLiveFundamentals] = React.useState(null);
+  const [chartType, setChartType] = React.useState("Candle");
+  const [candleTf, setCandleTf] = React.useState("1D");
+  const [lineTf,   setLineTf]   = React.useState("1Y");
+
+  React.useEffect(() => {
+    setLiveNews(null);
+    fetchTickerNews(selectedTicker)
+      .then(r => setLiveNews(r.items?.length > 0 ? r.items : null))
+      .catch(() => {});
+  }, [selectedTicker]);
+
+  React.useEffect(() => {
+    setLiveFundamentals(null);
+    fetchFundamentals(selectedTicker)
+      .then(r => setLiveFundamentals(r))
+      .catch(() => {});
+  }, [selectedTicker]);
+
+  // --- derived values ---
+  const S_base = isNvda ? AF_DATA.NVDA_STATS : {
     ...AF_DATA.NVDA_STATS,
     price: stock.price,
     change: stock.change ?? 0,
@@ -38,7 +73,29 @@ export function TickerDetailScreen({ setScreen, selectedTicker = "NVDA", tickerB
     revGrowth: typeof stock.revGrowth === "number" ? stock.revGrowth.toFixed(1) + "%" : AF_DATA.NVDA_STATS.revGrowth,
     sector: stock.sector,
   };
-  const news = AF_DATA.NVDA_NEWS;
+  const S = liveFundamentals ? {
+    ...S_base,
+    marketCap: liveFundamentals.marketCap ?? S_base.marketCap,
+    pe: liveFundamentals.pe ?? S_base.pe,
+    eps: liveFundamentals.eps ?? S_base.eps,
+    beta: liveFundamentals.beta ?? S_base.beta,
+    high52: liveFundamentals.high52w ?? S_base.high52,
+    low52: liveFundamentals.low52w ?? S_base.low52,
+    divYield: liveFundamentals.divYield ?? S_base.divYield,
+    revGrowth: liveFundamentals.revGrowth ?? S_base.revGrowth,
+    revenue: liveFundamentals.revenue ?? S_base.revenue,
+    netIncome: liveFundamentals.netIncome ?? S_base.netIncome,
+    fcf: liveFundamentals.fcf ?? S_base.fcf,
+    roe: liveFundamentals.roe ?? S_base.roe,
+    grossMargin: liveFundamentals.grossMargin ?? S_base.grossMargin,
+    opMargin: liveFundamentals.opMargin ?? S_base.opMargin,
+    netMargin: liveFundamentals.netMargin ?? S_base.netMargin,
+    debtEquity: liveFundamentals.debtEquity ?? S_base.debtEquity,
+    sector: liveFundamentals.sector ?? S_base.sector,
+    exchange: liveFundamentals.exchange ?? S_base.exchange,
+  } : S_base;
+
+  const news = liveNews ?? [];
   const sc = isNvda ? AF_DATA.NVDA_SCORECARD : {
     ...AF_DATA.NVDA_SCORECARD,
     overall: ai.score,
@@ -50,12 +107,10 @@ export function TickerDetailScreen({ setScreen, selectedTicker = "NVDA", tickerB
     from52High: Number((((S.price - S.high52) / S.high52) * 100).toFixed(1)),
     from52Low: Number((((S.price - S.low52) / S.low52) * 100).toFixed(1)),
   };
-  const [chartType, setChartType] = React.useState("Candle");
+
   const isCandle = chartType === "Candle";
   const candleTfs = ["30m", "1h", "4h", "1D", "1W", "1M"];
   const lineTfs   = ["1W", "1M", "6M", "1Y", "5Y", "Max"];
-  const [candleTf, setCandleTf] = React.useState("1D");
-  const [lineTf,   setLineTf]   = React.useState("1Y");
   const tf = isCandle ? candleTf : lineTf;
   const setTf = isCandle ? setCandleTf : setLineTf;
 
@@ -170,18 +225,29 @@ export function TickerDetailScreen({ setScreen, selectedTicker = "NVDA", tickerB
           <div style={cardStyles.base}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <span style={cardStyles.cardTitle}>Recent News</span>
-              <span style={{ fontSize: 11, color: "var(--subtle)" }}>4 sources</span>
+              {news.length > 0 && <span style={{ fontSize: 11, color: "var(--subtle)" }}>{news.length} articles</span>}
             </div>
-            {news.map((n, i) => (
-              <div key={i} style={{ display: "flex", gap: 12, padding: "11px 0", borderBottom: i < news.length - 1 ? "1px solid var(--divider)" : "none" }}>
-                <div style={{ width: 36, fontSize: 10, color: "var(--subtle)", fontFamily: "'JetBrains Mono', monospace", paddingTop: 2, flexShrink: 0 }}>{n.time}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12.5, color: "var(--text)", lineHeight: 1.45, fontWeight: 500 }}>{n.headline}</div>
-                  <div style={{ fontSize: 11, color: "var(--subtle)", marginTop: 4 }}>{n.source}</div>
+            {liveNews === null && (
+              <div style={{ padding: "24px 0", textAlign: "center", color: "var(--muted)", fontSize: 12 }}>Loading news…</div>
+            )}
+            {liveNews !== null && news.length === 0 && (
+              <div style={{ padding: "24px 0", textAlign: "center", color: "var(--muted)", fontSize: 12 }}>No news found for {selectedTicker}.</div>
+            )}
+            {news.map((n, i) => {
+              const titleEl = n.url
+                ? <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit" }}>{n.title}</a>
+                : n.title;
+              const time = n.publishedAt ? relativeTime(n.publishedAt) : "—";
+              return (
+                <div key={i} style={{ display: "flex", gap: 12, padding: "11px 0", borderBottom: i < news.length - 1 ? "1px solid var(--divider)" : "none" }}>
+                  <div style={{ width: 36, fontSize: 10, color: "var(--subtle)", fontFamily: "'JetBrains Mono', monospace", paddingTop: 2, flexShrink: 0 }}>{time}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12.5, color: "var(--text)", lineHeight: 1.45, fontWeight: 500 }}>{titleEl}</div>
+                    <div style={{ fontSize: 11, color: "var(--subtle)", marginTop: 4 }}>{n.source}</div>
+                  </div>
                 </div>
-                <Badge variant={i === 0 ? "green" : i === 1 ? "green" : "default"}>{i < 2 ? "Bullish" : "Neutral"}</Badge>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

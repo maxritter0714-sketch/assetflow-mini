@@ -9,18 +9,64 @@ import {
 } from "../components.jsx";
 import { cardStyles, mainStyles, tableStyles } from "../styles.js";
 import { smallBtn, filterGroupStyle, filterLabelStyle, inputStyles } from "./secondaryShared.js";
+import { fetchScreener } from "../lib/api.js";
+
+function fmtMarketCap(num) {
+  if (num == null) return "—";
+  if (num >= 1e12) return (num / 1e12).toFixed(1) + "T";
+  if (num >= 1e9) return (num / 1e9).toFixed(1) + "B";
+  return "—";
+}
+
+function parseCap(capStr) {
+  if (!capStr) return 0;
+  if (capStr.endsWith("T")) return parseFloat(capStr) * 1e12;
+  if (capStr.endsWith("B")) return parseFloat(capStr) * 1e9;
+  return 0;
+}
 
 export function ScreenerScreen({ setScreen, setSelectedTicker, setTickerBackScreen, theme, setTheme }) {
   const { SCREENER_STOCKS, AI_SCORES } = AF_DATA;
   const [sector, setSector] = React.useState("All");
   const [capFilter, setCapFilter] = React.useState("All");
+  const [liveStocks, setLiveStocks] = React.useState(null);
+  const [liveStale, setLiveStale] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+
   const sectors = ["All", "Technology", "Consumer", "Finance", "Healthcare", "Energy"];
   const caps = ["All", "Mega (>$200B)", "Large ($50-200B)"];
 
-  const filtered = SCREENER_STOCKS.filter(s => {
+  React.useEffect(() => {
+    fetchScreener({ limit: 100 })
+      .then(r => {
+        if (r.stocks && r.stocks.length > 0) {
+          setLiveStocks(r.stocks);
+          setLiveStale(r.stale);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const displayStocks = liveStocks
+    ? liveStocks.map(s => ({
+        symbol: s.symbol,
+        name: s.name,
+        sector: s.sector ?? "Unknown",
+        marketCap: fmtMarketCap(s.marketCap),
+        _rawCap: s.marketCap ?? 0,
+        price: s.price ?? 0,
+        pe: s.pe ?? null,
+        revGrowth: s.revGrowth ?? null,
+        divYield: s.divYield ?? 0,
+        perf6m: s.perf6m ?? null,
+      }))
+    : SCREENER_STOCKS.map(s => ({ ...s, _rawCap: parseCap(s.marketCap) }));
+
+  const filtered = displayStocks.filter(s => {
     if (sector !== "All" && s.sector !== sector) return false;
-    if (capFilter === "Mega (>$200B)" && !s.marketCap.includes("T")) return false;
-    if (capFilter === "Large ($50-200B)" && s.marketCap.includes("T")) return false;
+    if (capFilter === "Mega (>$200B)" && s._rawCap < 200e9) return false;
+    if (capFilter === "Large ($50-200B)" && (s._rawCap < 50e9 || s._rawCap >= 200e9)) return false;
     return true;
   });
 
@@ -29,7 +75,10 @@ export function ScreenerScreen({ setScreen, setSelectedTicker, setTickerBackScre
       <div style={mainStyles.header}>
         <div>
           <h1 style={mainStyles.title}>Screener</h1>
-          <p style={mainStyles.subtitle}>Discover stocks with fundamentals + AI quality scoring</p>
+          <p style={mainStyles.subtitle}>
+            {liveStocks ? "Live data via FMP" : "Discover stocks with fundamentals + AI quality scoring"}
+            {liveStale && <span style={{ marginLeft: 8, fontSize: 11, color: "var(--amber, #f59e0b)" }}>· cached</span>}
+          </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <ThemeToggle theme={theme} setTheme={setTheme} />
@@ -38,7 +87,6 @@ export function ScreenerScreen({ setScreen, setSelectedTicker, setTickerBackScre
         </div>
       </div>
 
-      {/* Filter bar */}
       <div style={{ ...cardStyles.base, marginBottom: 14, padding: "14px 16px" }}>
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
           <div style={filterGroupStyle}>
@@ -69,7 +117,9 @@ export function ScreenerScreen({ setScreen, setSelectedTicker, setTickerBackScre
             <span style={filterLabelStyle}>AI Score</span>
             <select style={inputStyles.select}><option>Any</option><option>&gt; 70</option><option>&gt; 80</option></select>
           </div>
-          <span style={{ fontSize: 12, color: "var(--subtle)", marginLeft: "auto" }}>{filtered.length} results</span>
+          <span style={{ fontSize: 12, color: "var(--subtle)", marginLeft: "auto" }}>
+            {loading ? "Loading..." : `${filtered.length} results`}
+          </span>
         </div>
       </div>
 
@@ -91,6 +141,13 @@ export function ScreenerScreen({ setScreen, setSelectedTicker, setTickerBackScre
             </tr>
           </thead>
           <tbody>
+            {loading && !liveStocks && (
+              <tr>
+                <td colSpan={11} style={{ ...tableStyles.td, textAlign: "center", padding: "32px 0", color: "var(--muted)" }}>
+                  Loading live data...
+                </td>
+              </tr>
+            )}
             {filtered.map(s => {
               const ai = AI_SCORES[s.symbol] || { score: 70, tag: "—" };
               const aiColor = ai.score >= 85 ? "var(--success)" : ai.score >= 75 ? "var(--blue)" : "var(--amber)";
@@ -101,10 +158,10 @@ export function ScreenerScreen({ setScreen, setSelectedTicker, setTickerBackScre
                   <td style={{ ...tableStyles.td, textAlign: "center" }}><Badge>{s.sector}</Badge></td>
                   <td style={{ ...tableStyles.td, textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{s.marketCap}</td>
                   <td style={{ ...tableStyles.td, textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{fmtPrice(s.price)}</td>
-                  <td style={{ ...tableStyles.td, textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{fmtNum(s.pe, 1)}</td>
-                  <td style={{ ...tableStyles.td, textAlign: "right", fontWeight: 600, color: s.revGrowth >= 0 ? "var(--success)" : "var(--danger)" }}>{fmtPct(s.revGrowth)}</td>
+                  <td style={{ ...tableStyles.td, textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{s.pe != null ? fmtNum(s.pe, 1) : "—"}</td>
+                  <td style={{ ...tableStyles.td, textAlign: "right", fontWeight: 600, color: (s.revGrowth ?? 0) >= 0 ? "var(--success)" : "var(--danger)" }}>{s.revGrowth != null ? fmtPct(s.revGrowth) : "—"}</td>
                   <td style={{ ...tableStyles.td, textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{s.divYield > 0 ? s.divYield.toFixed(2) + "%" : "—"}</td>
-                  <td style={{ ...tableStyles.td, textAlign: "right", fontWeight: 600, color: s.perf6m >= 0 ? "var(--success)" : "var(--danger)" }}>{fmtPct(s.perf6m)}</td>
+                  <td style={{ ...tableStyles.td, textAlign: "right", fontWeight: 600, color: (s.perf6m ?? 0) >= 0 ? "var(--success)" : "var(--danger)" }}>{s.perf6m != null ? fmtPct(s.perf6m) : "—"}</td>
                   <td style={{ ...tableStyles.td, textAlign: "center" }}>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                       <span style={{ fontSize: 12.5, fontWeight: 700, color: aiColor, fontFamily: "'JetBrains Mono', monospace", minWidth: 22, textAlign: "right" }}>{ai.score}</span>
