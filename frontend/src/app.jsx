@@ -9,6 +9,7 @@ import {
   TickerDetailScreen,
 } from "./screens-main.jsx";
 import {
+  NewsScreen,
   ScreenerScreen,
   SettingsScreen,
   TransactionsScreen,
@@ -49,6 +50,7 @@ function App() {
           {screen === "ticker-detail" && <TickerDetailScreen setScreen={setScreen} selectedTicker={selectedTicker} tickerBackScreen={tickerBackScreen} {...themeProps} />}
           {screen === "watchlist" && <WatchlistScreen setScreen={setScreen} setSelectedTicker={setSelectedTicker} setTickerBackScreen={setTickerBackScreen} {...themeProps} />}
           {screen === "screener" && <ScreenerScreen setScreen={setScreen} setSelectedTicker={setSelectedTicker} setTickerBackScreen={setTickerBackScreen} {...themeProps} />}
+          {screen === "news" && <NewsScreen {...themeProps} />}
           {screen === "transactions" && <TransactionsScreen {...themeProps} />}
           {screen === "settings" && <SettingsScreen {...themeProps} />}
         </div>

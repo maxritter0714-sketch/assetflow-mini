@@ -155,6 +155,17 @@ def _compute_holdings_from_transactions(transactions: list, db: Session) -> list
     return result
 
 
+def get_portfolio_tickers(db: Session) -> list[str]:
+    transactions = db.query(Transaction).all()
+    shares_by_symbol: dict[str, float] = {}
+    for t in transactions:
+        if t.transaction_type == "buy":
+            shares_by_symbol[t.symbol] = shares_by_symbol.get(t.symbol, 0.0) + t.shares
+        elif t.transaction_type == "sell":
+            shares_by_symbol[t.symbol] = shares_by_symbol.get(t.symbol, 0.0) - t.shares
+    return [sym for sym, shares in shares_by_symbol.items() if shares > 0]
+
+
 def get_portfolio_summary_db(db: Session) -> PortfolioSummary:
     portfolios_raw = [
         {"id": p.id, "name": p.name, "currency": p.currency}

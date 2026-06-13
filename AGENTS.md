@@ -61,13 +61,23 @@ Use:
 
 ### Data Sources
 
-| Purpose | Source |
-|---|---|
-| Stock prices, history, fundamentals | yfinance (free) |
-| Stock screener | FMP free tier (API key via .env) |
-| Portfolio news + ticker news | FMP free tier |
-| Global macro / economy news | GDELT (free, filtered to financial themes) |
-| AI summaries | Ollama (local, Phase 9) |
+**Base URL for all FMP calls:** `https://financialmodelingprep.com/stable/`
+**Auth:** `?apikey=FMP_API_KEY` on every request.
+**FMP v3 is fully deprecated** (Aug 2025) — all v3 endpoints return 403. Use stable only.
+
+| Purpose | Source | FMP endpoint | Notes |
+|---|---|---|---|
+| Real-time price, daily change | yfinance | `/quote` (backup) | yfinance primary |
+| OHLCV chart history | yfinance | `/historical-price-eod/full` (backup) | yfinance primary |
+| Company overview (sector, market cap, beta) | FMP stable `/profile` (screener only) | — | free tier; 26 calls per 2h refresh |
+| Ticker fundamentals (P/E, margins, ROE, revenue, FCF, etc.) | yfinance `.info` | — | free, no key; replaces FMP to stay under 250 calls/day limit |
+| Ticker / portfolio news | yfinance | `/news/stock` (paywalled) | FMP news requires paid plan |
+| Global macro news | yfinance `^TNX`, `GC=F`, `CL=F`, `EURUSD=X`, `^VIX` | — | rates/bonds, gold, oil, FX, volatility |
+| Stock screener | FMP stable `/profile`, curated ~26-stock universe | `/company-screener` (paywalled) | free workaround: fetch profiles individually |
+| Symbol / name search | FMP stable | `/search-symbol`, `/search-name` | free tier |
+| AI summaries | Ollama (Phase 9) | — | local LLM |
+
+**FMP free tier — confirmed paywalled (402):** `/news/stock`, `/stock-list`, `/etf-list`, `/company-screener`
 
 ### AI
 
@@ -181,7 +191,7 @@ Split:
 
 ## Caching Strategy
 
-All external API responses (yfinance, FMP, GDELT) are cached in a `market_data_cache` database table.
+All external API responses (yfinance, FMP) are cached in a `market_data_cache` database table.
 
 | Data type | TTL |
 |---|---|
@@ -206,7 +216,7 @@ Redis is planned for the full AssetFlow product as an L1 cache layer in front of
 4. Manual transaction entry (buy/sell) — CSV import added later
 5. Market data via yfinance (prices, history, fundamentals)
 6. Stock screener via FMP
-7. Three news tabs: global macro (GDELT), portfolio (FMP), ticker (FMP)
+7. Three news tabs: global macro (yfinance macro instruments), portfolio news (yfinance), ticker news (yfinance + relevance filter)
 8. Quant analytics: Sharpe, VaR, Monte Carlo, Efficient Frontier
 9. AI narrative summaries via Ollama
 10. Full test coverage — statistical validation for quant calculations

@@ -8,9 +8,9 @@
 
 A full-stack portfolio management and research platform with quantitative analytics and local AI-assisted insights — built as both a personal finance tool and a technical showcase.
 
-The frontend is a multi-screen fintech application: candlestick charts with multiple timeframes and modes, a fundamentals grid, an AI score ring, a stock screener, portfolio performance charts, and sector allocation breakdowns. The backend is a FastAPI service backed by PostgreSQL, with live market data via yfinance (DB-cached), FMP and GDELT for news (planned), and a full quantitative analytics layer (Sharpe ratio, VaR, Monte Carlo simulation, Efficient Frontier, planned). AI narrative summaries will run locally via Ollama — no third-party LLM calls, no data leaves the machine.
+The frontend is a multi-screen fintech application: candlestick charts with multiple timeframes and modes, a fundamentals grid, an AI score ring, a stock screener, portfolio performance charts, and sector allocation breakdowns. The backend is a FastAPI service backed by PostgreSQL, with live market data and fundamentals via yfinance (DB-cached), FMP for screener profiles, and a full quantitative analytics layer (Sharpe ratio, VaR, Monte Carlo simulation, Efficient Frontier, planned). AI narrative summaries will run locally via Ollama — no third-party LLM calls, no data leaves the machine.
 
-**Status:** Active development — Phase 5 complete (live market data via yfinance). Phase 6 (news + screener) is next.
+**Status:** Active development — Phase 6 complete (screener, fundamentals, and news live). Phase 7–8 (quant analytics) is next.
 
 ---
 
@@ -28,19 +28,16 @@ graph TD
     BE["Backend\nFastAPI\n:8000"]
     DB[("PostgreSQL\n:5432")]
     YF["yfinance\nprices · history · fundamentals"]
-    FMP["FMP API\nscreener · news"]
-    GDELT["GDELT\nmacro news"]
+    FMP["FMP API\nscreener profiles"]
     OLLAMA["Ollama\nlocal LLM"]
 
     FE -->|REST| BE
     BE --> DB
     BE --> YF
-    BE -->|Phase 6| FMP
-    BE -->|Phase 6| GDELT
+    BE --> FMP
     BE -->|Phase 9| OLLAMA
     DB -->|cache layer| YF
     DB -->|cache layer| FMP
-    DB -->|cache layer| GDELT
 ```
 
 All external API responses (prices, news, screener) are cached in a `market_data_cache` table with per-type TTLs. If the external API is down, stale cache is returned with a `"stale": true` flag rather than an error.
@@ -98,9 +95,11 @@ All external API responses (prices, news, screener) are cached in a `market_data
 
 ### Planned
 
-**Phase 6 — News and screener**
-- Stock screener results sourced from FMP free tier
-- Three live news tabs: global macro (GDELT), portfolio news (FMP), ticker news (FMP)
+**Phase 6 — News and screener** ✅
+- Stock screener wired with live P/E, revenue growth, 6M performance (FMP profiles + yfinance)
+- Live fundamentals endpoint (`/api/fundamentals/{symbol}`) — yfinance `.info`, 24h cache
+- Three live news tabs: global macro (yfinance macro instruments: TNX, gold, oil, FX, VIX), portfolio news, ticker news
+- Ticker news relevance filter (`_is_relevant()`) to remove off-topic articles
 - 15-minute news cache
 
 **Phase 7–8 — Quantitative analytics**
@@ -127,7 +126,7 @@ All external API responses (prices, news, screener) are cached in a `market_data
 | Backend | FastAPI, Python 3.11+, uv |
 | Database | PostgreSQL 16 (Docker) |
 | ORM / Migrations | SQLAlchemy 2.0, Alembic |
-| Data | yfinance, FMP (free tier), GDELT |
+| Data | yfinance (prices, history, fundamentals, news), FMP stable API (screener profiles) |
 | AI | Ollama (local, Phase 9) |
 | Testing | pytest, httpx |
 
@@ -228,6 +227,11 @@ Frontend available at `http://localhost:5173`.
 | `DELETE` | `/api/transactions/{id}` | Delete a transaction |
 | `GET` | `/api/market/quote/{symbol}` | Live quote (DB-cached, 5 min TTL) |
 | `GET` | `/api/market/history/{symbol}` | OHLCV bars (DB-cached, 1 hr TTL) — `?period=1mo\|3mo\|6mo\|1y\|2y\|5y` |
+| `GET` | `/api/fundamentals/{symbol}` | Key stats + financials (yfinance, DB-cached, 24h TTL) |
+| `GET` | `/api/news/ticker/{symbol}` | Ticker news with relevance filter (DB-cached, 15 min TTL) |
+| `GET` | `/api/news/portfolio` | Portfolio-wide news (DB-cached, 15 min TTL) |
+| `GET` | `/api/news/macro` | Global macro news via yfinance macro instruments (DB-cached, 15 min TTL) |
+| `GET` | `/api/screener` | Stock screener with P/E, rev growth, 6M perf (DB-cached, 1 hr TTL) |
 
 ---
 
@@ -249,7 +253,7 @@ uv run pytest
 | 3 | PostgreSQL + SQLAlchemy + Alembic | Done |
 | 4 | Manual transaction entry | Done |
 | 5 | Live market data via yfinance | Done |
-| 6 | Stock screener + news (FMP, GDELT) | Next |
+| 6 | Stock screener + news + fundamentals | Done |
 | 7–8 | Quant analytics (Sharpe, VaR, Monte Carlo, Efficient Frontier) | Planned |
 | 9 | Local AI summaries via Ollama | Planned |
 
