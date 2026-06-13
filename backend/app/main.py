@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import routes_fundamentals, routes_health, routes_market, routes_news, routes_portfolio, routes_screener, routes_transactions
+from app.api import routes_fundamentals, routes_health, routes_market, routes_news, routes_portfolio, routes_screener, routes_transactions, routes_watchlist
 from app.core.config import SessionLocal
 from app.scripts.seed import seed_db
 
