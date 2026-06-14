@@ -4,7 +4,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-18+-61DAFB?logo=react&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-green)
+
 
 A full-stack portfolio management and research platform with quantitative analytics and local AI-assisted insights — built as both a personal finance tool and a technical showcase.
 
